@@ -14,6 +14,7 @@ from colorama import Fore, Style
 from colorama import init as colorama_init
 
 from config import *
+from events.OnVoiceState import get_double_bounds_from_log
 from utils.PlayerDataRequest import *
 
 colorama_init()
@@ -438,6 +439,13 @@ class Bet(commands.Cog):
 
         await ctx.send(f"Le pari a été créé dans {channel.mention} !", ephemeral=True)
 
+    def is_double_bounds_now():
+        heure_debut, heure_fin = get_double_bounds_from_log()
+        if not heure_debut or not heure_fin:
+            return False
+        current_time = datetime.now().time()
+        return heure_debut.time() <= current_time < heure_fin.time()
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
@@ -455,6 +463,10 @@ class Bet(commands.Cog):
 
                 if any(role.id == BOOSTER_ROLE_ID for role in message.author.roles):
                     bonus += BOOSTER_BONUS_MESS
+
+                if self.is_double_bounds_now():
+                    bonus *= 2
+                    logger.info(f"Multiplicateur X2 appliqué à {message.author.name}")
 
                 self.player_data[user_id]["bounds"] += bonus
                 logger.info(
